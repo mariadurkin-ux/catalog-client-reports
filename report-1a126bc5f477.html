@@ -1,0 +1,986 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catalog Music Hub</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Committed to a single light presentation by design -- a client-facing report reads
+   the same whether opened on a bright office monitor or printed, so no dark variant. */
+:root{
+  --bg:#f7f5f2;
+  --surface:#ffffff;
+  --surface-2:#efe9e2;
+  --ink:#1c1a19;
+  --muted:#8a8179;
+  --border:#e3ddd3;
+  --accent:#6d1f2b;
+  --accent-ink:#4a1319;
+  --accent-soft:#f2e2e1;
+  --gold:#9c7a3c;
+  --gold-soft:#f1e8d4;
+  --warn:#a5432a;
+  --warn-soft:#f4dfd7;
+  /* Semantic use-type colors -- deliberately separate from the brand accent above,
+     so a badge's meaning reads at a glance regardless of the report's theme. */
+  --sem-red:#ad3a3a; --sem-red-soft:#f7e0df;
+  --sem-orange:#b5691f; --sem-orange-soft:#f6e3cf;
+  --sem-green:#3f6b45; --sem-green-soft:#e1e9e0;
+  --shadow: 0 1px 2px rgba(28,22,20,.05), 0 10px 28px -14px rgba(28,22,20,.16);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Work Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size:14px;
+  line-height:1.45;
+}
+.mono{font-family:"JetBrains Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums;}
+.display{font-family:"Cormorant Garamond", Georgia, serif;}
+
+.wrap{max-width:1220px; margin:0 auto; padding:40px 32px 88px;}
+
+/* ---- header ---- */
+header.top{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:32px;
+  flex-wrap:wrap;
+  padding-bottom:28px; margin-bottom:32px;
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex; flex-direction:column; gap:8px;}
+.brand h1{
+  font-family:"Cormorant Garamond", Georgia, serif;
+  font-weight:600; font-size:36px; letter-spacing:.01em;
+  margin:0; text-wrap:balance;
+}
+.brand .tag{
+  font-family:"Cormorant Garamond", Georgia, serif;
+  font-style:italic; font-weight:500;
+  color:var(--muted); font-size:17px;
+}
+.sigpool-badge{
+  display:inline-flex; align-items:center; gap:7px;
+  margin-top:2px; width:fit-content;
+  padding:5px 12px; border-radius:999px;
+  background:var(--accent-soft); color:var(--accent-ink);
+  font-size:11.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+}
+.sigpool-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+
+.loaders{display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap;}
+.loader{
+  display:flex; flex-direction:column; gap:6px; align-items:flex-start;
+}
+.loader.primary{
+  border-left:1px solid var(--border); padding-left:20px;
+}
+.loader label{
+  font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+}
+.file-btn{
+  position:relative; overflow:hidden;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 12px; border-radius:8px;
+  background:var(--surface); border:1px solid var(--border);
+  font-size:12.5px; font-weight:500; color:var(--ink);
+  cursor:pointer; box-shadow:var(--shadow);
+  transition:border-color .15s ease;
+}
+.file-btn:hover{border-color:var(--accent);}
+.file-btn input{position:absolute; inset:0; opacity:0; cursor:pointer;}
+.file-btn .state{width:7px;height:7px;border-radius:50%; background:var(--border); flex:none;}
+.file-btn.loaded .state{background:var(--accent);}
+
+/* ---- tabs ---- */
+.tabbar{display:flex; gap:6px; margin-bottom:28px;}
+.tabbar button{
+  font-family:"Work Sans", sans-serif;
+  font-size:14px; font-weight:600; color:var(--muted); letter-spacing:.01em;
+  background:none; border:none; cursor:pointer;
+  padding:10px 18px; border-radius:8px;
+  transition:background .15s ease, color .15s ease;
+}
+.tabbar button.active{background:var(--surface-2); color:var(--ink);}
+.tabbar button:hover:not(.active){color:var(--ink);}
+
+.tabpanel{display:none;}
+.tabpanel.active{display:block; animation:fade .25s ease;}
+@keyframes fade{from{opacity:0; transform:translateY(2px);} to{opacity:1; transform:none;}}
+
+.sample-banner{
+  display:flex; align-items:center; gap:8px;
+  background:var(--gold-soft); color:var(--gold);
+  border-radius:8px; padding:10px 16px; margin-bottom:20px;
+  font-size:12.5px; font-weight:500;
+}
+.sample-banner strong{font-weight:700;}
+
+/* ---- stat tiles ---- */
+.stats{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr));
+  gap:1px; background:var(--border);
+  border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  margin-bottom:28px; box-shadow:var(--shadow);
+}
+.stat{background:var(--surface); padding:20px 22px; display:flex; flex-direction:column; gap:5px;}
+.stat .n{font-family:"Cormorant Garamond", Georgia, serif; font-size:32px; font-weight:600; font-variant-numeric:tabular-nums;}
+.stat .l{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);}
+
+/* ---- filter chips ---- */
+.chips{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+.chip{
+  padding:6px 14px; border-radius:999px; border:1px solid var(--border);
+  background:var(--surface); font-size:12.5px; font-weight:500; color:var(--muted);
+  cursor:pointer; transition:.15s ease;
+}
+.chip.active{background:var(--ink); color:var(--bg); border-color:var(--ink);}
+
+/* ---- export ---- */
+.tab-toolbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px;}
+.export-btn{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 16px; border-radius:8px;
+  background:var(--surface); border:1px solid var(--border);
+  font-family:"Work Sans", sans-serif; font-size:12.5px; font-weight:600; color:var(--ink);
+  cursor:pointer; box-shadow:var(--shadow); transition:border-color .15s ease;
+}
+.export-btn:hover{border-color:var(--accent);}
+.export-btn:disabled{opacity:.5; cursor:default;}
+.export-btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+.export-btn.primary:hover{background:var(--accent-ink);}
+.export-status{display:block; font-size:11px; color:var(--muted); margin-top:5px;}
+.export-status.error{color:var(--warn);}
+
+/* ---- table ---- */
+.table-scroll{overflow-x:auto; border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);}
+table{width:100%; border-collapse:collapse; background:var(--surface); font-size:13px;}
+thead th{
+  text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+  color:var(--muted); font-weight:600; padding:13px 16px;
+  background:var(--surface-2); white-space:nowrap; cursor:pointer; user-select:none;
+  border-bottom:1px solid var(--border);
+}
+thead th:hover{color:var(--ink);}
+thead th .arrow{opacity:.5; margin-left:3px;}
+tbody td{padding:12px 16px; border-bottom:1px solid var(--border); vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+td.num, th.num{text-align:right; font-family:"JetBrains Mono", monospace; font-variant-numeric:tabular-nums;}
+td.trunc{max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+
+.pill{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  font-size:11.5px; font-weight:600; white-space:nowrap;
+}
+.pill.stock{background:var(--gold-soft); color:var(--gold);}
+.pill.unidentified{background:var(--surface-2); color:var(--muted);}
+.pill.identified{background:var(--sem-red-soft); color:var(--sem-red);}
+.pill.possible{background:var(--sem-orange-soft); color:var(--sem-orange);}
+.pill.licensed{background:var(--sem-green-soft); color:var(--sem-green);}
+.pill.review{background:var(--surface-2); color:var(--muted); border:1px dashed var(--border);}
+.pill.classified{background:var(--accent-soft); color:var(--accent-ink);}
+
+select.override{
+  font-family:"Work Sans", sans-serif; font-size:12px; color:var(--ink);
+  background:var(--surface); border:1px solid var(--border); border-radius:6px;
+  padding:3px 6px; cursor:pointer;
+}
+a.link-out{color:var(--accent); text-decoration:none; font-weight:500;}
+a.link-out:hover{text-decoration:underline;}
+
+/* ---- artist row expand ---- */
+tr.artist-row{cursor:pointer;}
+tr.artist-row td:first-child{display:flex; align-items:center; gap:8px; font-weight:600; white-space:nowrap;}
+.caret{display:inline-block; transition:transform .15s ease; color:var(--muted); font-size:10px;}
+tr.artist-row.open .caret{transform:rotate(90deg);}
+
+.table-hint{
+  display:inline-flex; align-items:center; gap:9px;
+  font-family:"Work Sans", sans-serif; font-weight:700;
+  text-transform:uppercase; letter-spacing:.04em;
+  color:var(--accent-ink); font-size:12.5px;
+  background:var(--accent-soft); padding:10px 16px; border-radius:8px;
+  margin-bottom:18px;
+}
+.table-hint .hint-emoji{font-size:16px;}
+tr.detail-row td{background:var(--bg); padding:0; border-bottom:1px solid var(--border);}
+tr.detail-row .inner{padding:14px 18px 18px 34px;}
+tr.detail-row table{box-shadow:none; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
+.city-tag{color:var(--muted); font-size:12px;}
+.wide-text{max-width:320px; white-space:normal; line-height:1.5;}
+.age-bracket{color:var(--ink); font-weight:600;}
+
+.gender-bar{
+  width:88px; height:7px; border-radius:4px; overflow:hidden;
+  display:flex; background:var(--border);
+}
+.gender-bar .g-male{background:var(--accent);}
+.gender-bar .g-female{background:var(--gold);}
+.gender-legend{
+  margin-top:3px; font-size:11px; color:var(--muted);
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+
+footer.note{margin-top:28px; color:var(--muted); font-size:12px; text-align:center;}
+
+/* ---- passcode gate (a light deterrent, not real security -- the underlying report
+   data still ships in the page source either way) ---- */
+.gate-overlay{
+  position:fixed; inset:0; z-index:50;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px;
+}
+/* Belt and braces: this file may be opened standalone (no host page providing a
+   [hidden]{display:none!important} reset), so make sure hiding this overlay doesn't
+   depend on one -- our own display:flex above would otherwise outrank the browser's
+   default [hidden] behavior. */
+.gate-overlay[hidden]{display:none;}
+.gate-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow); padding:40px 44px; max-width:360px; width:100%;
+  text-align:center;
+}
+.gate-card h2{font-family:"Cormorant Garamond", Georgia, serif; font-size:26px; font-weight:600; margin:0 0 8px;}
+.gate-card p{color:var(--muted); font-size:13.5px; margin:0 0 20px;}
+.gate-card input{
+  width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg); color:var(--ink);
+  font-family:"JetBrains Mono", monospace; font-size:14px;
+  text-align:center; margin-bottom:14px;
+}
+.gate-card input:focus{outline:none; border-color:var(--accent);}
+.gate-card .export-btn{width:100%; justify-content:center;}
+.gate-error{color:var(--warn); font-size:12.5px; margin-top:12px;}
+</style>
+<style>:root{color-scheme:light}body{margin:0;padding:0}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style>
+</head>
+<body>
+
+<div class="gate-overlay" id="gateOverlay" hidden>
+  <div class="gate-card">
+    <h2>Catalog Music Hub</h2>
+    <p>This report is protected. Enter the access code you were given.</p>
+    <input type="password" id="gateInput" placeholder="Access code" autocomplete="off">
+    <button id="gateSubmit" class="export-btn primary">View report</button>
+    <div class="gate-error" id="gateError" hidden>That code isn't right — try again.</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Catalog Music Hub</h1>
+      <div class="tag" id="tagline">TikTok music detection &amp; commercial-use reporting</div>
+      <span class="sigpool-badge" id="sigpoolBadge"><span class="dot"></span>Example data</span>
+    </div>
+    <div class="loaders" id="loadersSection">
+      <div class="loader">
+        <label>Detection CSV</label>
+        <div class="file-btn" id="btnDetection"><span class="state"></span><span class="txt">Choose file</span>
+          <input type="file" accept=".csv" id="fileDetection">
+        </div>
+      </div>
+      <div class="loader">
+        <label>Artist summary CSV</label>
+        <div class="file-btn" id="btnArtist"><span class="state"></span><span class="txt">Choose file</span>
+          <input type="file" accept=".csv" id="fileArtist">
+        </div>
+      </div>
+      <div class="loader">
+        <label>Track detail CSV</label>
+        <div class="file-btn" id="btnTrack"><span class="state"></span><span class="txt">Choose file</span>
+          <input type="file" accept=".csv" id="fileTrack">
+        </div>
+      </div>
+      <div class="loader primary">
+        <label>Full breakdown</label>
+        <button class="export-btn primary" id="exportFullBtn">Export Full Report (PDF)</button>
+        <span class="export-status" id="exportFullStatus"></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabbar">
+    <button class="active" data-tab="detection">Detection</button>
+    <button data-tab="insights">Music Insights</button>
+  </div>
+
+  <div class="tabpanel active" id="tab-detection">
+    <div class="sample-banner" id="bannerDetection"><strong>Example data</strong> — load your sigpool's <span class="mono">_external.csv</span> above to see this client's real posts.</div>
+    <div class="stats" id="statsDetection"></div>
+    <div class="chips" id="chipsDetection"></div>
+    <div class="table-scroll">
+      <table id="tableDetection">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="tab-insights">
+    <div class="sample-banner" id="bannerInsights"><strong>Example data</strong> — load the <span class="mono">_music_insights_artist_summary.csv</span> and <span class="mono">_track_detail.csv</span> files above.</div>
+    <div class="stats" id="statsInsights"></div>
+    <div class="table-hint"><span class="hint-emoji">💡</span> Click an artist to see the individual tracks and posts behind it</div>
+    <div class="table-scroll">
+      <table id="tableArtist">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="note" id="footerNote">Powered by Catalog</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/* ---------------- CSV parsing ---------------- */
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', i = 0, inQuotes = false;
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  while (i < text.length){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (text[i+1] === '"'){ field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    if (c === '"'){ inQuotes = true; i++; continue; }
+    if (c === ','){ row.push(field); field=''; i++; continue; }
+    if (c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; i++; continue; }
+    field += c; i++;
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  while (rows.length && rows[rows.length-1].length===1 && rows[rows.length-1][0]==='') rows.pop();
+  if (!rows.length) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(r => {
+    const o = {};
+    headers.forEach((h, idx) => o[h] = (r[idx] !== undefined ? r[idx] : '').trim());
+    return o;
+  });
+}
+
+function num(v, fallback){
+  if (v === undefined || v === null || v === '') return fallback === undefined ? null : fallback;
+  const n = parseFloat(v);
+  return isNaN(n) ? (fallback === undefined ? null : fallback) : n;
+}
+function fmt(n){
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+function fmt1(n){
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString('en-US', {maximumFractionDigits:1});
+}
+
+/* ---------------- PDF export (a proper branded report to hand to people outside the company) ---------------- */
+// Set once the logo file is available: a "data:image/png;base64,...." string.
+const LOGO_DATA_URI = null;
+
+let downloadsCap = null;
+(async () => {
+  try{ downloadsCap = await claude.use('downloads'); }catch(e){ downloadsCap = null; }
+  if (!downloadsCap){
+    document.getElementById('exportFullBtn').style.display = 'none';
+  }
+})();
+
+function reportHeader(doc, title){
+  const marginLeft = LOGO_DATA_URI ? 76 : 40;
+  if (LOGO_DATA_URI){
+    doc.addImage(LOGO_DATA_URI, 'PNG', 40, 26, 28, 28);
+  }
+  doc.setFont('times', 'bold'); doc.setFontSize(17); doc.setTextColor('#1c1a19');
+  doc.text(title, marginLeft, 40);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#8a8179');
+  const sub = [(state.sigpoolName || 'Example data'), new Date().toLocaleDateString('en-GB', {year:'numeric', month:'long', day:'numeric'})].join('   ·   ');
+  doc.text(sub, marginLeft, 58);
+  return 74; // startY for the table
+}
+
+function stripEmoji(str){
+  // jsPDF's built-in fonts don't have emoji glyphs (flags would render as tofu boxes).
+  if (!str) return str;
+  return str.replace(/\p{Extended_Pictographic}|\p{Regional_Indicator}/gu, '').replace(/\s+/g, ' ').trim();
+}
+
+function useTypeColor(v){
+  if (v === 'Stock Music') return '#9c7a3c';
+  if (v === 'Unidentified') return '#8a8179';
+  if (v === 'Identified') return '#ad3a3a';
+  if (v === 'Possible') return '#b5691f';
+  if (v === 'Licensed') return '#3f6b45';
+  if (v === 'Needs review') return '#8a8179';
+  return '#6d1f2b';
+}
+
+const PDF_TABLE_STYLE = {
+  styles: { font: 'helvetica', fontSize: 8, cellPadding: 5, textColor: '#1c1a19', lineColor: '#e3ddd3', lineWidth: 0.5 },
+  headStyles: { fillColor: '#efe9e2', textColor: '#4a1319', fontStyle: 'bold', fontSize: 8 },
+  alternateRowStyles: { fillColor: '#faf8f5' },
+};
+
+async function saveDoc(doc, filename, statusEl){
+  if (!downloadsCap){
+    statusEl.textContent = "Export isn't available in this view.";
+    statusEl.className = 'export-status error';
+    return;
+  }
+  try{
+    const result = await downloadsCap.save({ filename, data: doc.output('blob') });
+    statusEl.textContent = result.status === 'saved' ? 'Saved.' : 'Sent.';
+    statusEl.className = 'export-status';
+  }catch(e){
+    if (e && e.code === 'declined') { statusEl.textContent = ''; return; }
+    statusEl.textContent = (e && e.message) ? e.message : 'Export failed.';
+    statusEl.className = 'export-status error';
+  }
+}
+
+function addDetectionTable(doc, startY){
+  const rows = filteredSortedDetectionRows();
+  doc.autoTable({
+    ...PDF_TABLE_STYLE,
+    head: [['Date', 'Artist', 'Title', 'ISRC', 'Label', 'Use type', 'Views', 'Post']],
+    body: rows.map(r => [
+      r.date || '—', r.artist || '—', r.title || '—', r.isrc || '—', r.label || '—',
+      effectiveUseType(r) || 'Needs review', fmt(num(r.views)), r.url || '—',
+    ]),
+    startY,
+    columnStyles: { 7: { cellWidth: 170 } },
+    didParseCell(data){
+      if (data.section === 'body' && data.column.index === 5){
+        data.cell.styles.textColor = useTypeColor(data.cell.raw);
+        data.cell.styles.fontStyle = 'bold';
+      }
+    },
+  });
+}
+
+function addArtistTable(doc, startY){
+  const numericKeys = ['distinct_tracks_used', 'total_times_used', 'combined_views', 'combined_likes', 'artist_spotify_listeners_latest', 'artist_tiktok_male_pct'];
+  const rows = sortRows(state.artist, state.sortArtist, numericKeys);
+  doc.autoTable({
+    ...PDF_TABLE_STYLE,
+    head: [['Artist', 'Tracks used', 'Total uses', 'Post views', 'Post likes', 'Spotify listeners', 'Spotify top cities', 'TikTok male', 'TikTok female', 'TikTok age breakdown']],
+    body: rows.map(a => [
+      a.artist || '—',
+      fmt(num(a.distinct_tracks_used)), fmt(num(a.total_times_used)),
+      fmt(num(a.combined_views)), fmt(num(a.combined_likes)),
+      fmt(num(a.artist_spotify_listeners_latest)),
+      stripEmoji(a.artist_top_cities) || '—',
+      (a.artist_tiktok_male_pct !== undefined && a.artist_tiktok_male_pct !== null && a.artist_tiktok_male_pct !== '') ? fmt1(num(a.artist_tiktok_male_pct)) + '%' : '—',
+      (a.artist_tiktok_female_pct !== undefined && a.artist_tiktok_female_pct !== null && a.artist_tiktok_female_pct !== '') ? fmt1(num(a.artist_tiktok_female_pct)) + '%' : '—',
+      a.artist_tiktok_age_breakdown || '—',
+    ]),
+    startY,
+    columnStyles: { 6: { cellWidth: 110 }, 9: { cellWidth: 150 } },
+  });
+}
+
+function addTrackTable(doc, startY){
+  doc.autoTable({
+    ...PDF_TABLE_STYLE,
+    head: [['Artist', 'Track', 'ISRC', 'Use type', 'Post', 'Uploaded', 'Post views', 'Post likes', 'Uses', 'Spotify streams (all-time)']],
+    body: state.track.map(t => [
+      t.artist || '—', t.title || '—', t.isrc || '—',
+      effectiveUseType(t) || 'Needs review',
+      t.tiktok_url || '—', t.upload_date || '—',
+      fmt(num(t.views)), fmt(num(t.likes)), fmt(num(t.track_times_used)), fmt(num(t.track_streams_all_time)),
+    ]),
+    startY,
+    columnStyles: { 4: { cellWidth: 170 } },
+    didParseCell(data){
+      if (data.section === 'body' && data.column.index === 3){
+        data.cell.styles.textColor = useTypeColor(data.cell.raw);
+        data.cell.styles.fontStyle = 'bold';
+      }
+    },
+  });
+}
+
+async function exportFullReportPDF(){
+  const statusEl = document.getElementById('exportFullStatus');
+  statusEl.textContent = ''; statusEl.className = 'export-status';
+  if (!(window.jspdf && window.jspdf.jsPDF)){
+    statusEl.textContent = 'PDF library failed to load.'; statusEl.className = 'export-status error'; return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+  // --- Cover: overview stats from both tabs ---
+  let y = reportHeader(doc, 'Catalog Music Hub — Full Report');
+  const dStats = computeDetectionStats(state.detection);
+  const iStats = computeInsightsStats();
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor('#1b1d22');
+  doc.text('Detection overview', 40, y + 10);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#3a3d43');
+  [
+    `Posts scanned: ${fmt(dStats.total)}`,
+    `Music identified: ${dStats.total ? Math.round(dStats.identified / dStats.total * 100) : 0}%`,
+    `Stock music uses: ${fmt(dStats.stock)}`,
+    `Needs manual review: ${fmt(dStats.review)}`,
+    `Combined views: ${fmt(dStats.totalViews)}`,
+  ].forEach((line, i) => doc.text(line, 40, y + 32 + i * 16));
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor('#1b1d22');
+  doc.text('Music Insights overview', 340, y + 10);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor('#3a3d43');
+  [
+    `Artists detected: ${fmt(iStats.artists)}`,
+    `Distinct tracks: ${fmt(iStats.tracks)}`,
+    `Total track uses: ${fmt(iStats.uses)}`,
+    `Combined views: ${fmt(iStats.views)}`,
+  ].forEach((line, i) => doc.text(line, 340, y + 32 + i * 16));
+
+  // --- Detection: per post ---
+  doc.addPage();
+  y = reportHeader(doc, 'Detection — per post');
+  addDetectionTable(doc, y);
+
+  // --- Music Insights: artist summary ---
+  doc.addPage();
+  y = reportHeader(doc, 'Music Insights — artist summary');
+  addArtistTable(doc, y);
+
+  // --- Music Insights: track detail ---
+  doc.addPage();
+  y = reportHeader(doc, 'Music Insights — track detail');
+  addTrackTable(doc, y);
+
+  await saveDoc(doc, (state.sigpoolName || 'catalog-music-hub') + '_full-report.pdf', statusEl);
+}
+
+document.getElementById('exportFullBtn').addEventListener('click', exportFullReportPDF);
+
+/* ---------------- sample data ---------------- */
+const SAMPLE_DETECTION = [
+  {use_type:'Stock Music', date:'2026-06-02', artist:'Lumen & Tide', title:'Skyline Drift', isrc:'QZLUM2401882', label:'Epidemic Sound', views:'184200', url:'https://www.tiktok.com/@brand/video/7301'},
+  {use_type:'', date:'2026-06-04', artist:'Nova Ember', title:'Glass Hour', isrc:'GBBKS2400213', label:'', views:'62100', url:'https://www.tiktok.com/@brand/video/7302'},
+  {use_type:'', date:'2026-06-05', artist:'Nova Ember', title:'Glass Hour', isrc:'GBBKS2400213', label:'', views:'451900', url:'https://www.tiktok.com/@brand/video/7303'},
+  {use_type:'Unidentified', date:'2026-06-06', artist:'', title:'', isrc:'', label:'', views:'12800', url:'https://www.tiktok.com/@brand/video/7304'},
+  {use_type:'Stock Music', date:'2026-06-08', artist:'Artlist House Band', title:'Low Tide', isrc:'USUPM2312044', label:'Artlist', views:'93400', url:'https://www.tiktok.com/@brand/video/7305'},
+  {use_type:'Licensed', date:'2026-06-09', artist:'The Quiet Static', title:'Neon Static', isrc:'GBBKS2400871', label:'', views:'27650', url:'https://www.tiktok.com/@brand/video/7306'},
+  {use_type:'Possible', date:'2026-06-11', artist:'Nova Ember', title:'Coastline', isrc:'GBBKS2400214', label:'', views:'118300', url:'https://www.tiktok.com/@brand/video/7307'},
+  {use_type:'Unidentified', date:'2026-06-13', artist:'', title:'', isrc:'', label:'', views:'5400', url:'https://www.tiktok.com/@brand/video/7308'},
+];
+
+const SAMPLE_ARTIST = [
+  {artist:'Nova Ember', distinct_tracks_used:'2', total_times_used:'3', combined_views:'632300', combined_likes:'41200', artist_spotify_listeners_latest:'214000', artist_tiktok_male_pct:'68.2', artist_tiktok_female_pct:'31.8', artist_tiktok_age_breakdown:'13-17: 8.1%, 18-24: 53.3%, 25-34: 28.5%, 35-44: 10.1%', artist_top_cities:'🇬🇧 London, 🇬🇧 Manchester, 🇩🇪 Berlin'},
+  {artist:'The Quiet Static', distinct_tracks_used:'1', total_times_used:'1', combined_views:'27650', combined_likes:'1890', artist_spotify_listeners_latest:'41200', artist_tiktok_male_pct:'41.5', artist_tiktok_female_pct:'58.5', artist_tiktok_age_breakdown:'18-24: 44.0%, 25-34: 39.2%, 35-44: 16.8%', artist_top_cities:'🇮🇪 Dublin, 🇬🇧 Bristol'},
+];
+const SAMPLE_TRACK = [
+  {artist:'Nova Ember', title:'Glass Hour', isrc:'GBBKS2400213', label:'', use_type:'', tiktok_url:'https://www.tiktok.com/@brand/video/7302', upload_date:'2026-06-04', views:'62100', likes:'3800', comments:'210', shares:'95', track_times_used:'2', track_streams_all_time:'1840000', artist_spotify_listeners_latest:'214000', artist_top_cities:'🇬🇧 London, 🇬🇧 Manchester, 🇩🇪 Berlin'},
+  {artist:'Nova Ember', title:'Glass Hour', isrc:'GBBKS2400213', label:'', use_type:'', tiktok_url:'https://www.tiktok.com/@brand/video/7303', upload_date:'2026-06-05', views:'451900', likes:'33600', comments:'1420', shares:'810', track_times_used:'2', track_streams_all_time:'1840000', artist_spotify_listeners_latest:'214000', artist_top_cities:'🇬🇧 London, 🇬🇧 Manchester, 🇩🇪 Berlin'},
+  {artist:'Nova Ember', title:'Coastline', isrc:'GBBKS2400214', label:'', use_type:'', tiktok_url:'https://www.tiktok.com/@brand/video/7307', upload_date:'2026-06-11', views:'118300', likes:'3800', comments:'150', shares:'44', track_times_used:'1', track_streams_all_time:'965000', artist_spotify_listeners_latest:'214000', artist_top_cities:'🇬🇧 London, 🇬🇧 Manchester, 🇩🇪 Berlin'},
+  {artist:'The Quiet Static', title:'Neon Static', isrc:'GBBKS2400871', label:'', use_type:'', tiktok_url:'https://www.tiktok.com/@brand/video/7306', upload_date:'2026-06-09', views:'27650', likes:'1890', comments:'88', shares:'21', track_times_used:'1', track_streams_all_time:'194000', artist_spotify_listeners_latest:'41200', artist_top_cities:'🇮🇪 Dublin, 🇬🇧 Bristol'},
+];
+
+/* ---------------- embedded data ----------------
+   A client-ready snapshot HTML file (built from this same template by the notebook)
+   replaces the "null" below with a real {sigpoolName, detection, artist, track}
+   object, baking that run's results directly into the file -- no CSV loading, no
+   Claude account, nothing but a browser needed to open it. Left null here so this
+   generic/shared template still shows example data with the CSV pickers. */
+const EMBEDDED_DATA = {"sigpoolName": "MariaDurkin", "generatedDate": "2026-09-08", "detection": [{"use_type": "Unidentified", "date": "2026-09-08", "artist": null, "title": null, "isrc": null, "label": null, "views": "39", "url": "https://www.tiktok.com/@mariadurkin/video/7683092620284874006"}, {"use_type": "Unidentified", "date": "2026-09-08", "artist": null, "title": null, "isrc": null, "label": null, "views": "39", "url": "https://www.tiktok.com/@mariadurkin/video/7683092402281778454"}, {"use_type": "Unidentified", "date": "2026-09-08", "artist": null, "title": null, "isrc": null, "label": null, "views": "37", "url": "https://www.tiktok.com/@mariadurkin/video/7683092213508607254"}, {"use_type": "Unidentified", "date": "2026-09-08", "artist": null, "title": null, "isrc": null, "label": null, "views": "238", "url": "https://www.tiktok.com/@mariadurkin/video/7683091932716846358"}, {"use_type": "Unidentified", "date": "2026-08-06", "artist": null, "title": null, "isrc": null, "label": null, "views": "257", "url": "https://www.tiktok.com/@mariadurkin/video/7670947319344418070"}, {"use_type": "Unidentified", "date": "2026-07-03", "artist": null, "title": null, "isrc": null, "label": null, "views": "793", "url": "https://www.tiktok.com/@mariadurkin/video/7658264685262687491"}, {"use_type": "Unidentified", "date": "2026-07-03", "artist": null, "title": null, "isrc": null, "label": null, "views": "805", "url": "https://www.tiktok.com/@mariadurkin/video/7658264367703608598"}, {"use_type": "Unidentified", "date": "2026-06-15", "artist": null, "title": null, "isrc": null, "label": null, "views": "0", "url": "https://www.tiktok.com/@mariadurkin/video/7651575128723082518"}], "artist": [], "track": [], "passcodeHash": "626e3c805e77eeb472c42c6be607be2af7ac5c08fd7050f278e0330fe81abf57"};
+
+/* ---------------- state ---------------- */
+const state = {
+  detection: EMBEDDED_DATA ? EMBEDDED_DATA.detection : SAMPLE_DETECTION.slice(),
+  artist: EMBEDDED_DATA ? EMBEDDED_DATA.artist : SAMPLE_ARTIST.slice(),
+  track: EMBEDDED_DATA ? EMBEDDED_DATA.track : SAMPLE_TRACK.slice(),
+  isSampleDetection: !EMBEDDED_DATA,
+  isSampleInsights: !EMBEDDED_DATA,
+  sigpoolName: EMBEDDED_DATA ? EMBEDDED_DATA.sigpoolName : null,
+  overrides: {},
+  sortDetection: {key:'date', dir:-1},
+  sortArtist: {key:'total_times_used', dir:-1},
+  chip: 'all',
+  openArtist: null,
+};
+
+try{
+  const raw = localStorage.getItem('catalogSignalOverrides');
+  if (raw) state.overrides = JSON.parse(raw);
+}catch(e){}
+
+function overrideKey(row){ return (row.isrc || '') + '|' + (row.url || row.tiktok_url || ''); }
+function saveOverrides(){
+  try{ localStorage.setItem('catalogSignalOverrides', JSON.stringify(state.overrides)); }catch(e){}
+}
+function effectiveUseType(row){
+  const key = overrideKey(row);
+  if (state.overrides[key]) return state.overrides[key];
+  return row.use_type || '';
+}
+
+/* ---------------- file loading ---------------- */
+function wireFileButton(inputId, btnId, onLoad){
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const rows = parseCSV(e.target.result);
+      onLoad(rows, file.name);
+      btn.classList.add('loaded');
+      btn.querySelector('.txt').textContent = file.name;
+    };
+    reader.readAsText(file);
+  });
+}
+
+wireFileButton('fileDetection', 'btnDetection', (rows, name) => {
+  state.detection = rows;
+  state.isSampleDetection = false;
+  const m = name.match(/^(.+?)_\d{4}-\d{2}-\d{2}_external/);
+  if (m) { state.sigpoolName = m[1]; renderBadge(); }
+  renderDetection();
+});
+wireFileButton('fileArtist', 'btnArtist', (rows) => {
+  state.artist = rows; state.isSampleInsights = false; renderInsights();
+});
+wireFileButton('fileTrack', 'btnTrack', (rows) => {
+  state.track = rows; state.isSampleInsights = false; renderInsights();
+});
+
+function renderBadge(){
+  const el = document.getElementById('sigpoolBadge');
+  const tagline = document.getElementById('tagline');
+  if (state.sigpoolName){
+    // One clean line naming the client -- no separate badge, no "sigpool" anywhere.
+    tagline.textContent = `${state.sigpoolName} TikTok Detection & Music Insight`;
+    el.style.display = 'none';
+  } else {
+    tagline.textContent = 'TikTok music detection & commercial-use reporting';
+    el.style.display = '';
+    el.innerHTML = '<span class="dot"></span>Example data';
+  }
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tabbar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabbar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------------- Detection tab ---------------- */
+const DETECTION_COLS = [
+  {key:'date', label:'Date'},
+  {key:'artist', label:'Artist'},
+  {key:'title', label:'Title'},
+  {key:'isrc', label:'ISRC', mono:true},
+  {key:'label', label:'Label'},
+  {key:'use_type', label:'Use type'},
+  {key:'views', label:'Post views', num:true},
+  {key:'url', label:'Post'},
+];
+
+const USE_TYPE_PILL_CLASS = {
+  'Stock Music': 'stock',
+  'Unidentified': 'unidentified',
+  'Identified': 'identified',
+  'Possible': 'possible',
+  'Licensed': 'licensed',
+};
+
+function useTypePill(row){
+  const eff = effectiveUseType(row);
+  if (eff === '') return null; // needs the select
+  const cls = USE_TYPE_PILL_CLASS[eff] || 'classified';
+  return `<span class="pill ${cls}">${eff}</span>`;
+}
+
+function computeDetectionStats(rows){
+  const total = rows.length;
+  const identified = rows.filter(r => effectiveUseType(r) !== 'Unidentified').length;
+  const stock = rows.filter(r => effectiveUseType(r) === 'Stock Music').length;
+  const review = rows.filter(r => effectiveUseType(r) === '').length;
+  const totalViews = rows.reduce((s,r) => s + (num(r.views,0)||0), 0);
+  return { total, identified, stock, review, totalViews };
+}
+
+function renderDetectionStats(rows){
+  const { total, identified, stock, review, totalViews } = computeDetectionStats(rows);
+  document.getElementById('statsDetection').innerHTML = `
+    <div class="stat"><div class="n">${fmt(total)}</div><div class="l">Posts scanned</div></div>
+    <div class="stat"><div class="n">${total? Math.round(identified/total*100):0}%</div><div class="l">Music identified</div></div>
+    <div class="stat"><div class="n">${fmt(stock)}</div><div class="l">Stock music uses</div></div>
+    <div class="stat"><div class="n">${fmt(review)}</div><div class="l">Needs manual review</div></div>
+    <div class="stat"><div class="n">${fmt(totalViews)}</div><div class="l">Combined views</div></div>
+  `;
+}
+
+function renderChips(){
+  const chips = [
+    {key:'all', label:'All'},
+    {key:'Stock Music', label:'Stock Music'},
+    {key:'Unidentified', label:'Unidentified'},
+    {key:'review', label:'Needs review'},
+  ];
+  document.getElementById('chipsDetection').innerHTML = chips.map(c =>
+    `<span class="chip ${state.chip===c.key?'active':''}" data-chip="${c.key}">${c.label}</span>`
+  ).join('');
+  document.querySelectorAll('#chipsDetection .chip').forEach(el => {
+    el.addEventListener('click', () => { state.chip = el.dataset.chip; renderDetection(); });
+  });
+}
+
+function sortRows(rows, sortState, numericKeys){
+  const {key, dir} = sortState;
+  return rows.slice().sort((a,b) => {
+    let av = a[key], bv = b[key];
+    if (numericKeys.includes(key)){ av = num(av, -Infinity); bv = num(bv, -Infinity); }
+    else { av = (av||'').toString().toLowerCase(); bv = (bv||'').toString().toLowerCase(); }
+    if (av < bv) return -1*dir;
+    if (av > bv) return 1*dir;
+    return 0;
+  });
+}
+
+function filteredSortedDetectionRows(){
+  let rows = state.detection;
+  if (state.chip === 'Stock Music') rows = rows.filter(r => effectiveUseType(r) === 'Stock Music');
+  else if (state.chip === 'Unidentified') rows = rows.filter(r => effectiveUseType(r) === 'Unidentified');
+  else if (state.chip === 'review') rows = rows.filter(r => effectiveUseType(r) === '');
+  return sortRows(rows, state.sortDetection, ['views']);
+}
+
+function renderDetection(){
+  document.getElementById('bannerDetection').style.display = state.isSampleDetection ? 'flex' : 'none';
+  renderChips();
+  renderDetectionStats(state.detection);
+
+  const rows = filteredSortedDetectionRows();
+
+  const thead = document.querySelector('#tableDetection thead');
+  thead.innerHTML = '<tr>' + DETECTION_COLS.map(c =>
+    `<th class="${c.num?'num':''}" data-key="${c.key}">${c.label}${state.sortDetection.key===c.key ? '<span class="arrow">'+(state.sortDetection.dir===1?'↑':'↓')+'</span>' : ''}</th>`
+  ).join('') + '</tr>';
+  thead.querySelectorAll('th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (state.sortDetection.key === key) state.sortDetection.dir *= -1;
+      else { state.sortDetection.key = key; state.sortDetection.dir = 1; }
+      renderDetection();
+    });
+  });
+
+  const tbody = document.querySelector('#tableDetection tbody');
+  tbody.innerHTML = rows.map(r => {
+    const pill = useTypePill(r);
+    const useCell = pill ? pill : `
+      <select class="override" data-key="${overrideKey(r)}">
+        <option value="" ${!state.overrides[overrideKey(r)]?'selected':''}>Needs review</option>
+        <option value="Identified">Identified</option>
+        <option value="Possible">Possible</option>
+        <option value="Licensed">Licensed</option>
+        <option value="Stock Music">Stock Music</option>
+      </select>`;
+    return `<tr>
+      <td class="mono">${r.date||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${r.artist||'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="trunc">${r.title||'<span style="color:var(--muted)">—</span>'}</td>
+      <td class="mono">${r.isrc||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${r.label||'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${useCell}</td>
+      <td class="num">${fmt(num(r.views))}</td>
+      <td>${r.url ? `<a class="link-out" href="${r.url}" target="_blank" rel="noopener">Open ↗</a>` : '<span style="color:var(--muted)">—</span>'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:24px;">No posts match this filter.</td></tr>`;
+
+  tbody.querySelectorAll('select.override').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const key = sel.dataset.key;
+      if (sel.value) state.overrides[key] = sel.value;
+      else delete state.overrides[key];
+      saveOverrides();
+      renderDetection();
+    });
+  });
+}
+
+function formatAgeBreakdown(str){
+  if (!str) return '—';
+  // "18-24: 53.3%, 25-34: 39.2%" -> bold the bracket label so it doesn't blend into the percentages.
+  return str.replace(/(\d+-\d+|\d+\+):/g, '<strong class="age-bracket">$1:</strong>');
+}
+
+function genderBar(malePct, femalePct){
+  const m = num(malePct), f = num(femalePct);
+  if (m === null && f === null) return '<span style="color:var(--muted)">—</span>';
+  const mv = m || 0, fv = f || 0;
+  const total = mv + fv || 1;
+  return `<div class="gender-bar" title="Male ${fmt1(mv)}% / Female ${fmt1(fv)}%">
+    <span class="g-male" style="width:${mv/total*100}%"></span>
+    <span class="g-female" style="width:${fv/total*100}%"></span>
+  </div>
+  <div class="gender-legend">${fmt1(mv)}% M · ${fmt1(fv)}% F</div>`;
+}
+
+/* ---------------- Music Insights tab ---------------- */
+const ARTIST_COLS = [
+  {key:'artist', label:'Artist'},
+  {key:'distinct_tracks_used', label:'Tracks used', num:true},
+  {key:'total_times_used', label:'Total uses', num:true},
+  {key:'combined_views', label:'Total post views', num:true},
+  {key:'combined_likes', label:'Total post likes', num:true},
+  {key:'artist_spotify_listeners_latest', label:'Spotify listeners', num:true},
+  {key:'artist_top_cities', label:'Spotify top cities'},
+  {key:'artist_tiktok_male_pct', label:'TikTok gender breakdown', num:true},
+  {key:'artist_tiktok_age_breakdown', label:'TikTok age breakdown'},
+];
+
+function computeInsightsStats(){
+  const artists = state.artist.length;
+  const tracks = new Set(state.track.map(t => t.isrc)).size;
+  const uses = state.track.reduce((s,t) => s + (num(t.track_times_used,0)||0), 0);
+  const views = state.artist.reduce((s,a) => s + (num(a.combined_views,0)||0), 0);
+  return { artists, tracks, uses, views };
+}
+
+function renderInsightsStats(){
+  const { artists, tracks, uses, views } = computeInsightsStats();
+  document.getElementById('statsInsights').innerHTML = `
+    <div class="stat"><div class="n">${fmt(artists)}</div><div class="l">Artists detected</div></div>
+    <div class="stat"><div class="n">${fmt(tracks)}</div><div class="l">Distinct tracks</div></div>
+    <div class="stat"><div class="n">${fmt(uses)}</div><div class="l">Total track uses</div></div>
+    <div class="stat"><div class="n">${fmt(views)}</div><div class="l">Combined views</div></div>
+  `;
+}
+
+function renderInsights(){
+  document.getElementById('bannerInsights').style.display = state.isSampleInsights ? 'flex' : 'none';
+  renderInsightsStats();
+
+  const numericKeys = ['distinct_tracks_used','total_times_used','combined_views','combined_likes','artist_spotify_listeners_latest','artist_tiktok_male_pct'];
+  const rows = sortRows(state.artist, state.sortArtist, numericKeys);
+
+  const thead = document.querySelector('#tableArtist thead');
+  thead.innerHTML = '<tr>' + ARTIST_COLS.map(c =>
+    `<th class="${c.num?'num':''}" data-key="${c.key}">${c.label}${state.sortArtist.key===c.key ? '<span class="arrow">'+(state.sortArtist.dir===1?'↑':'↓')+'</span>' : ''}</th>`
+  ).join('') + '</tr>';
+  thead.querySelectorAll('th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (state.sortArtist.key === key) state.sortArtist.dir *= -1;
+      else { state.sortArtist.key = key; state.sortArtist.dir = 1; }
+      renderInsights();
+    });
+  });
+
+  const tbody = document.querySelector('#tableArtist tbody');
+  if (!rows.length){
+    tbody.innerHTML = `<tr><td colspan="${ARTIST_COLS.length}" style="text-align:center; color:var(--muted); padding:24px;">No artist data loaded yet.</td></tr>`;
+    return;
+  }
+
+  let html = '';
+  rows.forEach(a => {
+    const open = state.openArtist === a.artist;
+    html += `<tr class="artist-row ${open?'open':''}" data-artist="${a.artist}">
+      <td><span class="caret">▸</span>${a.artist}</td>
+      <td class="num">${fmt(num(a.distinct_tracks_used))}</td>
+      <td class="num">${fmt(num(a.total_times_used))}</td>
+      <td class="num">${fmt(num(a.combined_views))}</td>
+      <td class="num">${fmt(num(a.combined_likes))}</td>
+      <td class="num">${fmt(num(a.artist_spotify_listeners_latest))}</td>
+      <td class="city-tag wide-text">${a.artist_top_cities||'—'}</td>
+      <td>${genderBar(a.artist_tiktok_male_pct, a.artist_tiktok_female_pct)}</td>
+      <td class="city-tag wide-text">${formatAgeBreakdown(a.artist_tiktok_age_breakdown)}</td>
+    </tr>`;
+    if (open){
+      const tracks = state.track.filter(t => t.artist === a.artist);
+      html += `<tr class="detail-row"><td colspan="${ARTIST_COLS.length}"><div class="inner">
+        <table>
+          <thead><tr>
+            <th>Track</th><th>ISRC</th><th>Use type</th><th>Post</th><th>Uploaded</th>
+            <th class="num">Post views</th><th class="num">Post likes</th><th class="num">Uses</th><th class="num">Spotify streams (all-time)</th>
+          </tr></thead>
+          <tbody>
+          ${tracks.map(t => `<tr>
+            <td>${t.title||'—'}</td>
+            <td class="mono">${t.isrc||'—'}</td>
+            <td>${useTypePill(t) || '<span class="pill review">Needs review</span>'}</td>
+            <td>${t.tiktok_url ? `<a class="link-out" href="${t.tiktok_url}" target="_blank" rel="noopener">Open ↗</a>` : '—'}</td>
+            <td class="mono">${t.upload_date||'—'}</td>
+            <td class="num">${fmt(num(t.views))}</td>
+            <td class="num">${fmt(num(t.likes))}</td>
+            <td class="num">${fmt(num(t.track_times_used))}</td>
+            <td class="num">${fmt(num(t.track_streams_all_time))}</td>
+          </tr>`).join('') || `<tr><td colspan="9" style="text-align:center; color:var(--muted);">No track-level rows for this artist.</td></tr>`}
+          </tbody>
+        </table>
+      </div></td></tr>`;
+    }
+  });
+  tbody.innerHTML = html;
+
+  tbody.querySelectorAll('tr.artist-row').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const a = tr.dataset.artist;
+      state.openArtist = state.openArtist === a ? null : a;
+      renderInsights();
+    });
+  });
+}
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+if (EMBEDDED_DATA){
+  document.getElementById('loadersSection').style.display = 'none';
+  renderBadge();
+
+  if (EMBEDDED_DATA.passcodeHash){
+    const overlay = document.getElementById('gateOverlay');
+    const input = document.getElementById('gateInput');
+    const errorEl = document.getElementById('gateError');
+    overlay.hidden = false;
+
+    const tryUnlock = async () => {
+      const hash = await sha256Hex(input.value.trim());
+      if (hash === EMBEDDED_DATA.passcodeHash){
+        overlay.hidden = true;
+      } else {
+        errorEl.hidden = false;
+        input.value = '';
+        input.focus();
+      }
+    };
+    document.getElementById('gateSubmit').addEventListener('click', tryUnlock);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+    input.focus();
+  }
+}
+
+const footerDate = EMBEDDED_DATA && EMBEDDED_DATA.generatedDate
+  ? EMBEDDED_DATA.generatedDate
+  : new Date().toLocaleDateString('en-GB', {year:'numeric', month:'long', day:'numeric'});
+document.getElementById('footerNote').textContent = `Powered by Catalog · Date: ${footerDate}`;
+
+renderDetection();
+renderInsights();
+</script>
+</body>
+</html>
