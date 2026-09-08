@@ -22,6 +22,11 @@
   --gold-soft:#f1e8d4;
   --warn:#a5432a;
   --warn-soft:#f4dfd7;
+  /* Semantic use-type colors -- deliberately separate from the brand accent above,
+     so a badge's meaning reads at a glance regardless of the report's theme. */
+  --sem-red:#ad3a3a; --sem-red-soft:#f7e0df;
+  --sem-orange:#b5691f; --sem-orange-soft:#f6e3cf;
+  --sem-green:#3f6b45; --sem-green-soft:#e1e9e0;
   --shadow: 0 1px 2px rgba(28,22,20,.05), 0 10px 28px -14px rgba(28,22,20,.16);
 }
 
@@ -171,7 +176,10 @@ td.trunc{max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:n
   font-size:11.5px; font-weight:600; white-space:nowrap;
 }
 .pill.stock{background:var(--gold-soft); color:var(--gold);}
-.pill.unidentified{background:var(--warn-soft); color:var(--warn);}
+.pill.unidentified{background:var(--surface-2); color:var(--muted);}
+.pill.identified{background:var(--sem-red-soft); color:var(--sem-red);}
+.pill.possible{background:var(--sem-orange-soft); color:var(--sem-orange);}
+.pill.licensed{background:var(--sem-green-soft); color:var(--sem-green);}
 .pill.review{background:var(--surface-2); color:var(--muted); border:1px dashed var(--border);}
 .pill.classified{background:var(--accent-soft); color:var(--accent-ink);}
 
@@ -188,6 +196,13 @@ tr.artist-row{cursor:pointer;}
 tr.artist-row td:first-child{display:flex; align-items:center; gap:8px; font-weight:600; white-space:nowrap;}
 .caret{display:inline-block; transition:transform .15s ease; color:var(--muted); font-size:10px;}
 tr.artist-row.open .caret{transform:rotate(90deg);}
+
+.table-hint{
+  display:flex; align-items:center; gap:6px;
+  font-family:"Cormorant Garamond", Georgia, serif; font-style:italic;
+  color:var(--muted); font-size:14px; margin-bottom:14px;
+}
+.table-hint .hint-caret{color:var(--accent); font-family:"Work Sans", sans-serif; font-style:normal; font-size:10px;}
 tr.detail-row td{background:var(--bg); padding:0; border-bottom:1px solid var(--border);}
 tr.detail-row .inner{padding:14px 18px 18px 34px;}
 tr.detail-row table{box-shadow:none; border:1px solid var(--border); border-radius:8px; overflow:hidden;}
@@ -205,10 +220,50 @@ tr.detail-row table{box-shadow:none; border:1px solid var(--border); border-radi
 }
 
 footer.note{margin-top:28px; color:var(--muted); font-size:12px; text-align:center;}
+
+/* ---- passcode gate (a light deterrent, not real security -- the underlying report
+   data still ships in the page source either way) ---- */
+.gate-overlay{
+  position:fixed; inset:0; z-index:50;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px;
+}
+/* Belt and braces: this file may be opened standalone (no host page providing a
+   [hidden]{display:none!important} reset), so make sure hiding this overlay doesn't
+   depend on one -- our own display:flex above would otherwise outrank the browser's
+   default [hidden] behavior. */
+.gate-overlay[hidden]{display:none;}
+.gate-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px;
+  box-shadow:var(--shadow); padding:40px 44px; max-width:360px; width:100%;
+  text-align:center;
+}
+.gate-card h2{font-family:"Cormorant Garamond", Georgia, serif; font-size:26px; font-weight:600; margin:0 0 8px;}
+.gate-card p{color:var(--muted); font-size:13.5px; margin:0 0 20px;}
+.gate-card input{
+  width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg); color:var(--ink);
+  font-family:"JetBrains Mono", monospace; font-size:14px;
+  text-align:center; margin-bottom:14px;
+}
+.gate-card input:focus{outline:none; border-color:var(--accent);}
+.gate-card .export-btn{width:100%; justify-content:center;}
+.gate-error{color:var(--warn); font-size:12.5px; margin-top:12px;}
 </style>
 <style>:root{color-scheme:light}body{margin:0;padding:0}img{max-width:100%}[hidden]:not([hidden=until-found]){display:none!important}</style>
 </head>
 <body>
+
+<div class="gate-overlay" id="gateOverlay" hidden>
+  <div class="gate-card">
+    <h2>Catalog Music Hub</h2>
+    <p>This report is protected. Enter the access code you were given.</p>
+    <input type="password" id="gateInput" placeholder="Access code" autocomplete="off">
+    <button id="gateSubmit" class="export-btn primary">View report</button>
+    <div class="gate-error" id="gateError" hidden>That code isn't right — try again.</div>
+  </div>
+</div>
 
 <div class="wrap">
   <header class="top">
@@ -264,6 +319,7 @@ footer.note{margin-top:28px; color:var(--muted); font-size:12px; text-align:cent
   <div class="tabpanel" id="tab-insights">
     <div class="sample-banner" id="bannerInsights"><strong>Example data</strong> — load the <span class="mono">_music_insights_artist_summary.csv</span> and <span class="mono">_track_detail.csv</span> files above.</div>
     <div class="stats" id="statsInsights"></div>
+    <div class="table-hint"><span class="hint-caret">▸</span> Click an artist to see the individual tracks and posts behind it</div>
     <div class="table-scroll">
       <table id="tableArtist">
         <thead></thead>
@@ -272,7 +328,7 @@ footer.note{margin-top:28px; color:var(--muted); font-size:12px; text-align:cent
     </div>
   </div>
 
-  <footer class="note" id="footerNote">Every CSV is parsed locally in your browser — nothing is uploaded anywhere. Use-type calls you make below are remembered on this device only.</footer>
+  <footer class="note" id="footerNote">Powered by Catalog</footer>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -349,9 +405,12 @@ function reportHeader(doc, title){
 
 function useTypeColor(v){
   if (v === 'Stock Music') return '#9c7a3c';
-  if (v === 'Unidentified') return '#a5432a';
+  if (v === 'Unidentified') return '#8a8179';
+  if (v === 'Identified') return '#ad3a3a';
+  if (v === 'Possible') return '#b5691f';
+  if (v === 'Licensed') return '#3f6b45';
   if (v === 'Needs review') return '#8a8179';
-  return '#6d1f2b'; // Identified / Possible / Licensed
+  return '#6d1f2b';
 }
 
 const PDF_TABLE_STYLE = {
@@ -502,8 +561,8 @@ const SAMPLE_DETECTION = [
   {use_type:'', date:'2026-06-05', artist:'Nova Ember', title:'Glass Hour', isrc:'GBBKS2400213', label:'', views:'451900', url:'https://www.tiktok.com/@brand/video/7303'},
   {use_type:'Unidentified', date:'2026-06-06', artist:'', title:'', isrc:'', label:'', views:'12800', url:'https://www.tiktok.com/@brand/video/7304'},
   {use_type:'Stock Music', date:'2026-06-08', artist:'Artlist House Band', title:'Low Tide', isrc:'USUPM2312044', label:'Artlist', views:'93400', url:'https://www.tiktok.com/@brand/video/7305'},
-  {use_type:'', date:'2026-06-09', artist:'The Quiet Static', title:'Neon Static', isrc:'GBBKS2400871', label:'', views:'27650', url:'https://www.tiktok.com/@brand/video/7306'},
-  {use_type:'', date:'2026-06-11', artist:'Nova Ember', title:'Coastline', isrc:'GBBKS2400214', label:'', views:'118300', url:'https://www.tiktok.com/@brand/video/7307'},
+  {use_type:'Licensed', date:'2026-06-09', artist:'The Quiet Static', title:'Neon Static', isrc:'GBBKS2400871', label:'', views:'27650', url:'https://www.tiktok.com/@brand/video/7306'},
+  {use_type:'Possible', date:'2026-06-11', artist:'Nova Ember', title:'Coastline', isrc:'GBBKS2400214', label:'', views:'118300', url:'https://www.tiktok.com/@brand/video/7307'},
   {use_type:'Unidentified', date:'2026-06-13', artist:'', title:'', isrc:'', label:'', views:'5400', url:'https://www.tiktok.com/@brand/video/7308'},
 ];
 
@@ -524,7 +583,7 @@ const SAMPLE_TRACK = [
    object, baking that run's results directly into the file -- no CSV loading, no
    Claude account, nothing but a browser needed to open it. Left null here so this
    generic/shared template still shows example data with the CSV pickers. */
-const EMBEDDED_DATA = null;
+const EMBEDDED_DATA = {"sigpoolName": "Trial Client", "generatedDate": "8 September 2026", "detection": [], "artist": [], "track": [], "passcodeHash": "d3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791"};
 
 /* ---------------- state ---------------- */
 const state = {
@@ -620,12 +679,19 @@ const DETECTION_COLS = [
   {key:'url', label:'Post'},
 ];
 
+const USE_TYPE_PILL_CLASS = {
+  'Stock Music': 'stock',
+  'Unidentified': 'unidentified',
+  'Identified': 'identified',
+  'Possible': 'possible',
+  'Licensed': 'licensed',
+};
+
 function useTypePill(row){
   const eff = effectiveUseType(row);
-  if (eff === 'Stock Music') return '<span class="pill stock">Stock Music</span>';
-  if (eff === 'Unidentified') return '<span class="pill unidentified">Unidentified</span>';
-  if (eff === '' ) return null; // needs the select
-  return '<span class="pill classified">'+eff+'</span>';
+  if (eff === '') return null; // needs the select
+  const cls = USE_TYPE_PILL_CLASS[eff] || 'classified';
+  return `<span class="pill ${cls}">${eff}</span>`;
 }
 
 function computeDetectionStats(rows){
@@ -856,11 +922,41 @@ function renderInsights(){
   });
 }
 
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 if (EMBEDDED_DATA){
   document.getElementById('loadersSection').style.display = 'none';
-  document.getElementById('footerNote').textContent = `This report is a snapshot for ${state.sigpoolName || 'this client'}, generated ${EMBEDDED_DATA.generatedDate || ''}. Use-type calls you make are remembered on this device only.`;
   renderBadge();
+
+  if (EMBEDDED_DATA.passcodeHash){
+    const overlay = document.getElementById('gateOverlay');
+    const input = document.getElementById('gateInput');
+    const errorEl = document.getElementById('gateError');
+    overlay.hidden = false;
+
+    const tryUnlock = async () => {
+      const hash = await sha256Hex(input.value.trim());
+      if (hash === EMBEDDED_DATA.passcodeHash){
+        overlay.hidden = true;
+      } else {
+        errorEl.hidden = false;
+        input.value = '';
+        input.focus();
+      }
+    };
+    document.getElementById('gateSubmit').addEventListener('click', tryUnlock);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+    input.focus();
+  }
 }
+
+const footerDate = EMBEDDED_DATA && EMBEDDED_DATA.generatedDate
+  ? EMBEDDED_DATA.generatedDate
+  : new Date().toLocaleDateString('en-GB', {year:'numeric', month:'long', day:'numeric'});
+document.getElementById('footerNote').textContent = `Powered by Catalog · Date: ${footerDate}`;
 
 renderDetection();
 renderInsights();
